@@ -16,19 +16,20 @@ output:
 
 ```{r setup, include=FALSE}
 options(htmltools.dir.version = FALSE)
+
 ```
 
----
+
 # Outline
 
-## Why we chose this topic (Chang)    
-## Import data & Data wrangling (Wu)
+## Why we chose this topic     
+## Import data & Data wrangling   
 #### Select and merge data 
 #### Data wrangling 
-## Descriptive analysis(Chang)  
+## Descriptive analysis  
 #### Mean and Frequency  
-## Regression analysis  (Wu)
-## Data visualization  (Wu)
+## Regression analysis   
+## Data visualization    
 
 ---
 class: inverse, center
@@ -50,7 +51,7 @@ class: inverse, center
 
 ---
 
-# Import data & Data wrangling (1)
+# Import data & Data wrangling 
 
 ### Select data and merge 
   
@@ -62,7 +63,7 @@ install.packages("EdSurvey")
 ```
 --
 
-**download, unzip and read the PISA data**
+**Download, unzip and read the PISA data**
 ```{r message = FALSE, warning=FALSE}
 library(EdSurvey)
 downloadPISA(years = 2012, database ="INT", 
@@ -76,11 +77,11 @@ pisa12<-readPISA(path = "C:/Users/X510/Desktop/PISA-2012/PISA/2012",
 ```
 
 ---
-# Import data & Data wrangling (2)  
+# Import data & Data wrangling   
 ### Select data and merge 
 
 **Select variable**
-```{r}
+```{r , message = FALSE, warning=FALSE}
 pisa12raw<-getData(pisa12, 
                    varnames=c("cnt","schoolid","stidstd","questid","bookid",
                               "st04q01","st28q01","st13q01","st26q01","st26q02",
@@ -98,13 +99,9 @@ pisa12raw<-getData(pisa12,
                addAttributes = FALSE)
 ```
 
-```{r echo=FALSE, comment='#'}
-
-```
-
 ---
 
-# Import data & Data wrangling (3)  
+# Import data & Data wrangling   
 ## Data wrangling
 
 **Turn to data frame**
@@ -113,7 +110,7 @@ pisa.dt<-do.call(rbind, pisa12raw)
 str(pisa.dt, list.len=8)
 ```
 ---
-# Import data & Data wrangling (4)  
+# Import data & Data wrangling   
 ## Data wrangling
 
 **Rename the variable**
@@ -128,9 +125,9 @@ levels(pisa.dt$ST13Q01)[levels(pisa.dt$ST13Q01)%in%
 ```
 
 ---
-# Import data & Data wrangling (5)  
+# Import data & Data wrangling 
 ## Data wrangling
-**Recode**
+**Recode and create variables: Gender, Book, Mother**
 ```{r comment='#', message=FALSE, warning=FALSE}
 library(dplyr)
 pisa.dt[, 6:22]<-sapply(pisa.dt[ ,6:22], function(x) as.numeric(x)) 
@@ -159,9 +156,9 @@ dta$Mother<-dta$ST13Q01
 ```
 
 ---
-# Import data & Data wrangling (6)  
+# Import data & Data wrangling 
 ## Data wrangling
-**Create new variables:posseission **
+**Create new variables:posseissions**
 
 **Revised code**
 ```{r comment='#', message=FALSE, warning=FALSE}
@@ -180,13 +177,13 @@ dta$Possessions<-dta$ST26Q01+dta$ST26Q02+dta$ST26Q03+dta$ST26Q04
 +dta$ST26Q05+dta$ST26Q06+dta$ST26Q07+dta$ST26Q08+dta$ST26Q09
 +dta$ST26Q10+dta$ST26Q11+dta$ST26Q12+dta$ST26Q13+dta$ST26Q14 
 ```
-
 ---
 
 # Descriptive analysis 
 ## Frequency
+### Describe book collection by country and gender 
 **install package "intsvy", it can produce descriptive table**
-```{r, message=FALSE}
+```{r, message=FALSE, warning=FALSE}
 # install the package, it can manipulate PISA data
 library(intsvy)
 ```
@@ -202,19 +199,12 @@ head(ptableCB)# Show data
 
 ---
 
-```{r}
-# alternative table display
-knitr::kable(head(ptableCB), align = "cc", format = "html") # align to center
-```
-
----
-
 # Descriptive analysis 
 ## Frequency
 **plot: Plot the frequency table**
 
 .pull-left[
-```{r plot-first, fig.show = 'hide'}
+```{r plot-last, fig.show = 'hide'}
 plot(na.omit(ptableCB), stacked=T)
 #stacked=T: Stack the histogram
 #na.omit: Omit NA
@@ -222,7 +212,7 @@ plot(na.omit(ptableCB), stacked=T)
 ]
 
 .pull-right[
-```{r ref.label = 'plot-first', echo = FALSE}
+```{r ref.label = 'plot-last', echo = FALSE}
 ```
 ]
 
@@ -234,6 +224,7 @@ plot(na.omit(ptableCB), stacked=T)
 
 # Descriptive analysis 
 ## Mean
+### Mean of math score by country, gender and book
 **pisa.mean.pv: Produce mean table according to variables**
 
 ```{r echo=TRUE, cache=TRUE}
@@ -243,17 +234,18 @@ pmeansMCGB <- pisa.mean.pv(pvlabel="MATH",
                            by=c("Country_ID", "Gender", "Book"),
                            data=pisa.dt,
                            export=FALSE)# output csv. file
-head(ptableCB)#show data
+
+head(pmeansMCGB) # Show data
 ```
 
 ---
 
 # Descriptive analysis 
 ## Mean
-**plot: Plot the mean table**
+**Plot the mean table**
 
 .pull-left[
-```{r plot-second, fig.show = 'hide'}
+```{r plot-first, fig.show = 'hide'}
 plot(na.omit(pmeansMCGB), sort=TRUE)
 #sort: list data in order
 #na.omit: Omit NA
@@ -261,13 +253,13 @@ plot(na.omit(pmeansMCGB), sort=TRUE)
 ]
 
 .pull-right[
-```{r ref.label = 'plot-second', echo = FALSE}
+```{r ref.label = 'plot-first', echo = FALSE}
 ```
 ]
 
 --
 
-Tanwan's math score are higher than other countries.
+Taiwan's math score are higher than other countries.
 On the countrary: Indonesia.
 
 ---
@@ -275,9 +267,8 @@ On the countrary: Indonesia.
 # Descriptive analysis 
 ## Descriptive table
 **install package "arsenal", it can produce descriptive table**
-```{r echo=TRUE, cache=TRUE}
+```{r echo=TRUE, cache=TRUE, warnning=FALSE}
 library(arsenal)
-library(DT)
 ```
 
 ```{r echo=TRUE, cache=TRUE}
@@ -304,12 +295,19 @@ controls <- tableby.control(
    Nmiss2 = "Missing"))
 ```
 
+**Show data**
+```{r echo=TRUE, eval=FALSE, message=FALSE, warning=FALSE}
+table <- tableby(Country_ID ~ ., data = tab_select, control = controls) #Categorize by Country
+
+summary(table, text=TRUE, title = "Descriptive table by Country")
+```
+
 ---
 
 # Descriptive analysis 
 ## Descriptive table
-**Show table**
-```{r echo=TRUE, cache=TRUE}
+
+```{r echo=FALSE, cache=TRUE}
 table <- tableby(Country_ID ~ ., data = tab_select, control = controls) #Categorize by Country
 
 summary(table, text=TRUE, title = "Descriptive table by Country")
@@ -318,12 +316,14 @@ summary(table, text=TRUE, title = "Descriptive table by Country")
 ---
 class: inverse, center, middle
 
-# Regression analysis  (Wu)
+# Regression analysis 
 
 ---
-# Regression analysis (1)
-**regression model** 
-```{r message=FALSE,warning=FALSE, fig.retina=2, out.width=5 }
+# Regression analysis
+**regression model**    
+Outcome: math score  
+Independent variables: gender, book collection, education level of mother and possessions
+```{r message=FALSE,warning=FALSE}
 library(intsvy)
 rmodelMGBMP <-pisa.reg.pv(pvlabel="MATH",
                           x=c("Gender","Book","Mother","Possessions"), 
@@ -333,150 +333,150 @@ rmodelMGBMP <-pisa.reg.pv(pvlabel="MATH",
 ```
 ---
 
-# Regression analysis (2)
+# Regression analysis 
 ```{r}
 plot(rmodelMGBMP)
 ```
 
 ---
-# Regression analysis (3)
+
+# Regression analysis
 **Extract estimate from regression model for further data visulization**
-### 1
+### Method 1
 ```{r}
 model.e<-sapply(rmodelMGBMP, "[", 5)
-model.e1<-bind_rows(model.e)%>%mutate(country=rep(c("AUS","CAN","DEU","ESP","FIN","FRA","GBR","IDN",
-                                              "ITA","JPN","MEX","MYS","NZL","TWN","USA"), each=6),
-                                item=rep(rownames(model.e$Australia.reg), 15))
-knitr::kable(head(model.e1), format = "html")
+model.e1<-bind_rows(model.e)%>%mutate(country=rep(c("AUS","CAN","DEU","ESP","FIN","FRA","GBR","IDN","ITA","JPN","MEX","MYS","NZL","TWN","USA"), each=6), item=rep(rownames(model.e$Australia.reg), 15))
 ```
 
----
-**Extract estimate from regression model for further data visulization**
-
+### Method 2
 ```{r}
-# alternative method
 datalist = list()
-for (i in 1:15){datalist[[i]]<-rmodelMGBMP[[i]]$reg}
- model<-do.call(rbind, datalist)%>%
-  mutate(Country=rep(c("AUS","CAN","DEU","ESP","FIN","FRA","GBR","IDN","ITA","JPN","MEX","MYS", "NZL","TWN","USA"), each=6)) 
-model$variable<-rep(rownames(rmodelMGBMP[[1]]$reg), 15)
-knitr::kable(head(model), format = "html")
-```
 
+for (i in 1:15) {  datalist[[i]]<-rmodelMGBMP[[i]]$reg}
+ model<-do.call(rbind, datalist)%>%
+  mutate(Country=rep(c("AUS","CAN","DEU","ESP","FIN","FRA","GBR","IDN",
+                       "ITA","JPN","MEX","MYS","NZL","TWN","USA"), each=6)) 
+model$variable<-rep(rownames(rmodelMGBMP[[1]]$reg), 15)
+```
 ---
-**Extract estimate from regression model for further data visulization**
+
+# Data visulization  
+Using **dplyr** and **tidyr** to extract estimate from regression model for further data visulization
+
 ```{r warning=FALSE, ,message=FALSE}
 library(dplyr)
 model.s<-model.e1%>%
   dplyr::select(item, country, Estimate)%>%
   tidyr::spread(item, Estimate)
-model.s[order(model.s$GenderM),]
+model.s[order(model.s$GenderM),] # sort by gender
+
 ```
 
 ---
-```{r warning=FALSE, ,message=FALSE}
-model.s$genderlevel<-with(model.s, 
-                          factor(findInterval(GenderM, c(-Inf,quantile(GenderM, probs=c(0.25, 0.75)),Inf)), labels=c("後面25%", "中間50%", "前面25%"))) 
 
-knitr::kable(head(model.s), format = "html")
-```
----
-class: inverse, center
-# Data visulization 
-
----
 # Data visulization
-```{r ,message=FALSE, warning=FALSE}
+**Quantitle by gender estimate**
+```{r echo=TRUE}
+model.s$genderlevel<-with(model.s, 
+                          factor(findInterval(GenderM, c(-Inf,quantile(GenderM, probs=c(0.25, 0.75)),Inf)), labels=c("<25%", "25%-75%", "75%"))) 
+
+head(model.s)
+```
+
+---
+
+# Data visualization 
+**Required packages**
+```{r echo=TRUE, warning=FALSE, ,message=FALSE}
 library(rworldmap)
 library(countrycode)
 library(RColorBrewer)
 ```
 
-**mapCountryData**
-```{r ,message=FALSE, warning=FALSE}
-cols<-heat.colors(6)
+Gap gender inmath score in PISA 2012 among 15 countries using *{{mapCountryData}}*  
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
 genderMap <- joinCountryData2Map(model.s, joinCode = "ISO3", nameJoinColumn = "country")
-
-```
-
----
-
-# Data visulization
-**mapCountryData**
-.pull-left[
-```{r plot-third, fig.show = 'hide', message=F, warning=F}
-
 mapCountryData(genderMap, nameColumnToPlot = "genderlevel", catMethod = "",
                addLegend = TRUE, missingCountryCol = "white",
-               colourPalette = rev(heat.colors(6)),
-               mapTitle = 'Gender estimate level in PISA 2012 among 15 countries')
+               colourPalette = rev(heat.colors(3)),
+               mapTitle = 'Gender gap in math score in PISA 2012 among 15 countries')
 
 ```
-]
 
-.pull-right[
-```{r ref.label = 'plot-third', echo = FALSE, message=F, warning=F}
+---
+
+# Data visulization
+Gap gender inmath score in PISA 2012 among 15 countries using *{{mapCountryData}}* 
+```{r echo=FALSE, out.height="200%", out.weight="200%", warning=FALSE, message=FALSE, fig.align="center"}
+genderMap <- joinCountryData2Map(model.s, joinCode = "ISO3", nameJoinColumn = "country")
+mapCountryData(genderMap, nameColumnToPlot = "genderlevel", catMethod = "",
+               addLegend = TRUE, missingCountryCol = "white",
+               colourPalette = rev(heat.colors(3)),
+               mapTitle = 'Gender gap in math score in PISA 2012 among 15 countries')
+
 ```
-]
 
 ---
 # Data visulization
-**ggplot**
-```{r ,message=FALSE, warning=FALSE}
-# Data visualization
+Gap gender in the math score in PISA 2012 among 15 countries using *{{ggplot2}}*
 
+```{r echo=TRUE, message=FALSE, warning=FALSE}
 library(ggplot2)
 library(dplyr)
 library(mapproj)
 # rename countries to meet the map_data
-model.sc<-model.s%>%
-  mutate(countries=c("Australia", "Canada", "Germany", 
+model.sc<-model.s%>%mutate(countries=c("Australia", "Canada", "Germany", 
                      "Spain", "Finland", "France", "United Kingdom",
                      "Indonesia", "Italy","Japan", "Mexico", "Malaysia", 
                      "New Zealand", "Taiwan", "USA"))
-
 WorldData <- map_data('world') %>% filter(region != "Antarctica") %>% fortify
 
-
 ```
----
-# Data visulization
-**ggplot**
 
-.pull-left[
-```{r plot-forth, fig.show = 'hide', message=FALSE, warning=FALSE}
-ggplot() +
-  geom_map(data = WorldData, map = WorldData,
-           aes(x = long, y = lat, group = group, map_id=region),
-           fill = "white", colour = "#7f7f7f", size=0.5) + 
-  geom_map(data = model.sc, map=WorldData,
-           aes(fill=genderlevel, map_id=countries),
+---
+# Data visulization   
+Gap gender in the math score in PISA 2012 among 15 countries using *{{ggplot2}}*
+```{r  message=FALSE, warning=FALSE,  out.height="300%", out.height="300%", fig.align="center"}
+p<-ggplot() + geom_map(data = WorldData, map = WorldData,
+                    aes(x=long, y=lat, group = group,map_id=region), 
+                    fill = "white", colour= "#7f7f7f", size=0.5) + 
+  geom_map(data = model.sc, map=WorldData,aes(fill=genderlevel, map_id=countries),
            colour="#7f7f7f", size=0.5) +
-  coord_map("rectangular", lat0=0, xlim=c(-180,180), ylim=c(-60, 90)) +
-  scale_fill_manual(values=brewer.pal(6, "Reds")) +
+  coord_map("rectangular", lat0=0, xlim=c(-180,180), ylim=c(-60, 90))+
+  scale_fill_manual(values=brewer.pal(6, "Reds")) +labs(fill="", title="Gender gap in math score in PISA 2012 among 15 countries", x="", y="")+theme_bw()+
+  theme(plot.margin=grid::unit(c(0,0,0,0), "pt"))
 
-  labs(fill="legend", title="Title", x="", y="") +
-  theme_bw()
 ```
-]
+--
 
-.pull-right[
-```{r ref.label = 'plot-forth', echo = FALSE, message=F, warning=F}
+```{r include=FALSE}
+ggsave("n.png", width = 10, height =5)
 ```
-]
 
 ---
+
+# Data visulization   
+Gap gender in the math score in PISA 2012 among 15 countries using *{{ggplot2}}*
+```{r echo=FALSE, fig.retina=1, message=FALSE, warning=FALSE}
+knitr::include_graphics("n.png")
+
+```
+
+---
+
 class: inverse, center
 
 # Conclusion
 
-### We try to simplify r-code, introduce different packages to manipulate the data. There are three useful packages we use in the task:
+### We try to simplify r-code, introduce different packages to manipulate the data. There are several useful packages we use in the task:
 
 ### 1. EdSurvey：It can read in and analyze education surveys. e.g.PISA, TIMSS.
 
 ### 2. intsvy：It can manipulate PISA data.
 
 ### 3. arsenal：Use for large-scale statistical summaries.
+
+### 4. rworldmap/ggplot: Useful tool for data visulization the data on world map
 
 ---
 class: inverse, center, middle
