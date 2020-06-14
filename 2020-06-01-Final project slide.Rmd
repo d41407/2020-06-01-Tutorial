@@ -1,0 +1,697 @@
+---
+title: "Final Project"
+subtitle: "Estimation of under-reported COVID-19 cases number"
+author: "HJ WU & CY Chang"
+institute: "Public Health & Education"
+date: "2020/06/15"
+output:
+  xaringan::moon_reader:
+    css: [default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+
+```
+
+
+# Outline
+
+## 1. Introduce COVID-19     
+## 2. Package to read the COVID-19 data
+## 3. World data (line plot)
+#### (1)confirmed by daily and cumulative
+#### (2)death  by daily and cumulative
+## 4. Top 20 countries 
+#### (1)confirmed cases
+#### (2)Fatality cases and rate  
+#### (3)Recovery cases
+## 5. calculate the under-report    
+
+---
+class: inverse, center, middle
+
+# 1. Introduce COVID-19 
+
+---
+## Introduce COVID-19 
+-Virus: severe acute respiratory syndrome coronavirus 2 (SARS-CoV-2)  
+-Disease: coronavirus disease (COVID-19)  
+-First identified in China, resulting in epidemic in China    
+-So far,  no vaccine for COVID-19
+---
+class: inverse, center, middle
+# 2. Package to read the COVID-19 data
+
+---
+# Package to read the COVID-19 data
+## The packages we use in the analysis.
+```{r message=FALSE, warning=FALSE}
+# Manipulate data & plot map
+library(dplyr)
+library(ggplot2)
+library(rworldmap)
+library(countrycode)
+library(RColorBrewer)
+```
+--
+## The packages relate to the COVID-19 data
+
+**COVID19**(https://cran.r-project.org/web/packages/COVID19/index.html)
+#### The package doesn't work. It can't find the COVID-19 data source.
+
+**covid19.analytics**(https://www.rdocumentation.org/packages/covid19.analytics/versions/1.0)
+#### We found it is more convenient to manipulate raw data than using packages.
+
+---
+# Package to read the COVID-19 data
+## There are two data sources we use in the analysis.
+**1. Our World in Data**(https://github.com/owid/covid-19-data/tree/master/public/data)
+#### It has countries & world data, but it doesn’t calculate “Recovery cases”.
+
+**2. COVID-19 Data Hub**(https://covid19datahub.io/articles/data.html#comments-1)
+#### It doesn’t include China’s information, but it calculates “Recovery cases”.
+
+<img src="https://covid19datahub.io/reference/figures/logo.png" width="25%" align="down" />
+
+---
+class: inverse, center, middle
+# 3. World data (line plot)
+## (1)Confirmed by daily and cumulative
+## (2)Death  by daily and cumulative
+
+---
+# World data (line plot)
+
+**Download Our World in Data**
+
+(https://github.com/owid/covid-19-data/tree/master/public/data)
+
+**Select world's case & death variables, creat "Day" variables**
+
+```{r eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE}
+download <- download.file("https://covid.ourworldindata.org/data/owid-covid-data.csv", "owid-covid-data.csv", method = "curl")
+```
+
+```{r echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE}
+raw <- read.csv("C:/Users/USER/Desktop/R_data management/Final project/2020-06-22-Final project_0613/owid-covid-data.csv", header=T, sep=",")#read csv. file
+saveRDS(raw, "raw.rds")
+raw<-readRDS("raw.rds")
+world <- subset(raw, raw$location=="World")[,c(3:8)]#select world's caes & death data
+colnames(world) <- c("World", "Date", "Total_case", "New_case", "Total_death","New_death") #rename variables
+world$Day <- 1:165 #creat "Day" variables
+knitr::kable(head(world),format = "html")
+world_new <- world[c(2,4,7)]#select world's New_case data
+```
+---
+## Update data every day
+```{r eval=FALSE,}
+downloadGithubData <- function() {
+  download.file(
+    url      = "https://github.com/XXX/COVID-19/archive/master.zip",
+    destfile = "/covid19_data.zip"
+  )
+  
+  data_path <- "/time_series_covid19_"
+  unzip(
+    zipfile   = "/covid19_data.zip",
+    files     = paste0(data_path, c( )),
+    exdir     = "",
+    junkpaths = T
+  )
+}
+updateData <- function() {
+  # Download data from Johns Hopkins (https://github.com/CSSEGISandData/COVID-19) if the data is older than 0.5h
+  if (!dir_exists("data")) {
+    dir.create('data')
+    downloadGithubData()
+  } else if ((!file.exists("/covid19_data.zip")) || (as.double(Sys.time() - file_info("/covid19_data.zip")$change_time, units = "hours") > 0.5)) {
+    downloadGithubData()
+  }
+}
+
+downloadGithubData()
+updateData()
+
+
+```
+
+---
+# World data (line plot)
+#### Confirmed by daily and cumulative.
+**Plot by "ggplot"**
+```{r echo=FALSE, out.height="300%", out.height="300%", fig.align="center"}
+ggplot() +
+  geom_line(data=world, aes(Day, Total_case), size=1.2,colour="red",linetype = "dashed")+
+  geom_line(data=world_new, aes(Day, New_case), size=1.2,colour="blue")+
+    
+  scale_x_continuous(breaks = c(1,33,62,93,123,154),
+                     label = c("JAN", "FEB", "MAR","APR","MAY","JUN"))+
+  scale_y_continuous(breaks = c(100000,1000000,2000000,3000000,4000000,5000000,6000000),label = c("100,000", "1,000,000", "2,000,000","3,000,000","4,000,000","5,000,000","6,000,000"))+
+  
+  annotate("text", x=140, y=330000, label="New cases",size=6) +
+ annotate("text", x=123, y=5000000, label="Total cases",size=6) +
+  
+  labs(x="Month",
+      y="Case")+
+  
+   theme_minimal()
+```
+---
+# World data (line plot)
+#### Death by daily and cumulative.
+**Plot by "ggplot"**
+```{r echo=FALSE, out.height="300%", out.height="300%", fig.align="center"}
+world_newd <- world[c(2,6,7)]#select world's New_death data
+ggplot() +
+  geom_line(data=world, aes(Day, Total_death),linetype = "dashed", size=1.2,colour="red")+
+  geom_line(data=world_newd, aes(Day, New_death), size=1.2,colour="blue")+
+    
+  scale_x_continuous(breaks = c(1,33,62,93,123,154),label = c("JAN", "FEB", "MAR","APR","MAY","JUN"))+
+  scale_y_continuous(breaks = c(5000,50000,100000,150000,200000,250000,300000,350000,400000),label = c("5,000", "50,000","100,000","150,000","200,000","250,000","300,000","350,000","400,000"))+
+  
+  annotate("text", x=140, y=25000, label="New deaths",size=6) +
+ annotate("text", x=119, y=310000, label="Total deaths",size=6) +
+  
+  labs(x="Month",
+      y="Death")+
+  
+  theme_minimal()
+```
+---
+class: inverse, center, middle
+# 4. Top 20 countries  
+## (1)Confirmed cases
+## (2)Fatality cases and rate  
+## (3)Recovery cases
+
+---
+# Top 20 countries - confirmed cases
+## Choose variables we want to analyze.
+```{r echo=FALSE, highlight.output = TRUE, highlight.output = c(1, 8)}
+dta <- select(raw, "iso_code","location", "date", "total_cases", "new_cases","total_cases_per_million","total_deaths","new_deaths","total_deaths_per_million")
+#select variables we want to analyze
+
+colnames(dta) <- c("ID", "Country", "Date", "Case", "New_case","cases_per_million", "Death", "New_death","death_per_million")
+#rename dta varibles
+
+dtanew <- subset(dta, dta$Date=="2020-06-12")
+#choose the latest data
+
+head(dtanew)
+```
+
+---
+# Top 20 countries - confirmed cases
+```{r echo=FALSE}
+dtanew <- dtanew[-209,]
+#omit the "World" data
+
+dtacase <- dtanew[order(-dtanew$Case),]
+#arrange dta in order, by"Confirmed"
+
+dtacase$Rank <- 1:208
+head(dtacase[c(2,4,6,10)], 20)#ranking data, show top 20 by "Case"
+```
+---
+# Plot world map-Total casees per million
+## Divide "cases  per million" into three level.
+```{r include=FALSE}
+quantile(dtacase$cases_per_million, probs=seq(from=0, to=1, by=.1))
+levels <- with(dtacase, cut(cases_per_million, ordered=T, breaks=c(0, 145, 594, 23000), labels=c("L：~145", "M：145~594", "H：594~23,000")))
+plotcase <- cbind(dtacase,levels)
+```
+
+
+```{r echo=FALSE, highlight.output = TRUE, highlight.output = c(1, 7)}
+head(plotcase,5)
+```
+
+---
+# Plot world map-Total casees per million
+```{r echo=FALSE, message=FALSE, warning=FALSE,  out.height="300%", out.height="300%", fig.align="center"}
+caseMap <- joinCountryData2Map(plotcase, joinCode = "ISO3", nameJoinColumn = "ID")
+mapCountryData(caseMap, nameColumnToPlot = "levels", catMethod = "",
+               addLegend = TRUE, missingCountryCol = "white",
+               colourPalette = rev(heat.colors(3)),
+               mapTitle = 'Total casees per million of COVID19')
+```
+
+---
+# Top 20 countries - Fatality & rate
+```{r echo=FALSE}
+dtadeath <- dtanew[order(-dtanew$Death),]
+#arrange dta in order, by"Death"
+
+dtadeath$Rank <- 1:208
+head(dtadeath[c(2,7,9,10)], 20)#ranking data, show top 20 by "Death"
+```
+
+---
+# Plot world map - Total death per million
+## Divide "death per million" into three level.
+```{r include=FALSE}
+quantile(dtadeath$death_per_million, probs=seq(from=0, to=1, by=.1))
+dlevels <- with(dtadeath, cut(death_per_million, ordered=T, breaks=c(0, 1.8, 15, 1300), labels=c("L：~1.8", "M：1.8~15", "H：15~1300")))
+plotdeath <- cbind(dtadeath,dlevels)
+```
+
+```{r echo=FALSE, highlight.output = TRUE, highlight.output = c(1, 7)}
+head(plotdeath,5)
+```
+
+
+---
+# Plot world map - Total death per million
+```{r echo=FALSE, message=FALSE, warning=FALSE,  out.height="300%", out.height="300%", fig.align="center"}
+deathMap <- joinCountryData2Map(plotdeath, joinCode = "ISO3", nameJoinColumn = "ID")
+mapCountryData(deathMap, nameColumnToPlot = "dlevels", catMethod = "",
+               addLegend = TRUE, missingCountryCol = "white",
+               colourPalette = rev(heat.colors(3)),
+               mapTitle = 'Total death per million of COVID19')
+```
+
+---
+# Top 20 countries-Recovery cases
+**Beause original data doesn’t calculate “Recovery cases”, we use another data. But the new data doesn’t include China’s information.**
+
+#### Download another data
+(https://storage.covid19datahub.io/data-1.zip)
+
+```{r include=FALSE}
+temp <- tempfile()
+download.file("https://storage.covid19datahub.io/data-1.zip",temp, mode="wb")
+rawdta <- read.csv(unz(temp, "data-1.csv"), header=T, sep=",")
+unlink(temp)
+
+data <- select(rawdta, "date","recovered","administrative_area_level_1")
+#select variables we want to analyze
+
+colnames(data) <- c("Date", "Recovered", "Country")
+#rename dta varibles
+
+recovery <- subset(data, data$Date=="2020-06-12")
+#view the latest data
+
+recovery <- recovery[order(-recovery$Recovered),]
+#arrange dta in order, by "Recovered"
+
+recovery$Rank <- 1:193
+#ranking data
+```
+<img src="https://covid19datahub.io/reference/figures/logo.png" width="15%" align="right" />
+---
+# Top 20 countries-Recovery cases
+**Select variables we want to analyze, ranking them.**
+```{r echo=FALSE}
+head(recovery,20)#top 20,by "Recovered" 
+```
+
+---
+class: inverse, center, middle
+# 5. Other analyses
+
+---
+# USA data
+```{r echo=FALSE}
+usa <- subset(raw, raw$location=="United States")[,c(3:8,9,11)]#select USA's caes & death data
+usa$Day <- 1:165 #creat "Day" variables
+tail(usa)
+usa_new <- usa[c(2,4,7,9)]#select world's New_case data
+usa_gun <- data.frame(
+  month=c(1,33,62,93,123,154),
+  sell=c(2936894,2702702,2802467,3740688,2911128,3091455),
+  sell2=c(936894,702702,802467,1740688,911128,1091455)
+)
+```
+---
+```{r echo=FALSE}
+ggplot() +
+  geom_line(data=usa, aes(Day, total_cases), size=1.2,colour="red",linetype = "dashed")+
+  geom_line(data=usa_new, aes(Day, new_cases), size=1.2,colour="blue")+
+  geom_point(data=usa_gun, aes(month, sell2), size=3,shape=21, fill="darkgreen", color="darkred")+
+    
+  scale_x_continuous(breaks = c(1,33,62,93,123,154),
+                     label = c("JAN", "FEB", "MAR","APR","MAY","JUN"))+
+  scale_y_continuous(
+    breaks = c(100000,500000,1000000,1500000,2000000),label = c("100,000", "500,000", "1,000,000","1,500,000","2,000,000"),
+    sec.axis = sec_axis(~.+2000000,breaks = seq(2000000,4000000,500000),label = c("2,000,000", "2,500,000", "3,000,000","3,500,000","4,000,000"),name="Selling"))+
+  
+  annotate("text", x=140, y=130000, label="New cases",size=6) +
+ annotate("text", x=123, y=500000, label="Total cases",size=6) +
+  annotate("text", x=93, y=1800000, label="Record-breaking",size=6) +
+  
+  labs(x="Month",
+      y="Case")+
+  
+   theme_minimal()
+```
+---
+## Americans purchasing record-breaking numbers of guns amid coronavirus
+**The Guardian**
+#### Thu 2 Apr 2020
+(https://www.theguardian.com/world/2020/apr/01/us-gun-purchases-coronavirus-record)
+
+<img src="https://i.guim.co.uk/img/media/fff7bccb07d4dd87f9f366036866fa7606bfdd4a/0_123_5084_3051/master/5084.jpg?width=620&quality=85&auto=format&fit=max&s=30f4b16c575d1c89d076f69a2353f56d" width="50%" align="down" />
+---
+class: inverse, center, middle
+# 5. Calculate the under-report
+
+---
+## Reported cases correction   
+-Vulnerability Factor(Vtb)
+```{r pressure, echo=FALSE, fig.cap=" ", out.width = '20%'}
+knitr::include_graphics("vtb.png")
+```
+-Potential case=Dailyconfirmed case/(V_tb*CFR of bench country)
+---
+```{r eval=FALSE, include=FALSE}
+########!!!!!!!!!!don't run!!!!!!
+#######################
+library(tidyverse)
+library(Country.code)
+library(dplyr)
+library(reshape2)
+library(ggplot2)
+library(rworldmap)
+library(countrycode)
+library(RColorBrewer)
+library(shiny)
+######################
+
+# Time series data of COVID-19
+downloadGithubData <- function() {
+  download.file(
+    url      = "https://github.com/CSSEGISandData/COVID-19/archive/master.zip",
+    destfile = "C:/Users/USER/Desktop/R_data management/Final project/covid19_data.zip"
+  )
+  
+  data_path <- "COVID-19-master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_"
+  unzip(
+    zipfile   = "C:/Users/USER/Desktop/R_data management/Final project/covid19_data.zip",
+    files     = paste0(data_path, c("confirmed_global.csv", 
+                                    "deaths_global.csv", 
+                                    "recovered_global.csv", 
+                                    "confirmed_US.csv", 
+                                    "deaths_US.csv")),
+    exdir     = "C:/Users/USER/Desktop/R_data management/Final project",
+    junkpaths = T
+  )
+}
+updateData <- function() {
+  # Download data from Johns Hopkins (https://github.com/CSSEGISandData/COVID-19) if the data is older than 0.5h
+  if (!dir_exists("data")) {
+    dir.create('data')
+    downloadGithubData()
+  } else if ((!file.exists("C:/Users/USER/Desktop/R_data management/Final project/covid19_data.zip")) || (as.double(Sys.time() - file_info("C:/Users/USER/Desktop/R_data management/Final project/covid19_data.zip")$change_time, units = "hours") > 0.5)) {
+    downloadGithubData()
+  }
+}
+
+downloadGithubData()
+# get data
+data_confirmed    <- read_csv("C:/Users/USER/Desktop/R_data management/Final project/time_series_covid19_confirmed_global.csv")
+data_deceased     <- read_csv("C:/Users/USER/Desktop/R_data management/Final project/time_series_covid19_deaths_global.csv")
+data_recovered    <- read_csv("C:/Users/USER/Desktop/R_data management/Final project/time_series_covid19_recovered_global.csv")
+data_confirmed_us <- read_csv("C:/Users/USER/Desktop/R_data management/Final project/time_series_covid19_confirmed_US.csv")
+data_deceased_us  <- read_csv("C:/Users/USER/Desktop/R_data management/Final project/time_series_covid19_deaths_US.csv")
+# wide to long
+
+
+data_confirmed_long <- data_confirmed %>%
+  pivot_longer(names_to = "date", cols = 5:ncol(data_confirmed)) %>%
+  group_by(`Country/Region`, date) %>%
+  dplyr::summarise("confirmed" = sum(value, na.rm = T))%>%
+  dplyr::select(`Country/Region`, date, confirmed)
+
+data_deceased_long <- data_deceased %>%
+  pivot_longer(names_to = "date", cols = 5:ncol(data_deceased)) %>%
+  group_by( `Country/Region`, date) %>%
+  dplyr::summarise("deceased" = sum(value, na.rm = T))%>%
+  dplyr::select(`Country/Region`, date, deceased)
+
+data_recovered_long <- data_recovered %>%
+  pivot_longer(names_to = "date", cols = 5:ncol(data_recovered)) %>%
+  group_by(`Country/Region`, date) %>%
+  dplyr::summarise("recovered" = sum(value, na.rm = T))%>%
+  dplyr::select(`Country/Region`, date, recovered)
+
+# US data
+data_confirmed_us_long <- data_confirmed_us %>%
+  dplyr::select(Province_State, Country_Region, Lat, Long_, 12:ncol(data_confirmed_us)) %>%
+  dplyr::rename(`Province/State` = Province_State, `Country/Region` = Country_Region, Long = Long_) %>%
+  pivot_longer(names_to = "date", cols = 5:(ncol(data_confirmed_us) - 7)) %>%
+  group_by(`Country/Region`, date) %>%
+  mutate(Lat  = na_if(Lat, 0),Long = na_if(Long, 0))%>%
+  dplyr::summarise("confirmed" = sum(value, na.rm = T))%>%
+  dplyr::select(`Country/Region`, date, confirmed)
+
+data_deceased_us_long <- data_deceased_us %>%
+  dplyr::select(Province_State, Country_Region, 13:(ncol(data_confirmed_us))) %>%
+  dplyr::rename(`Province/State` = Province_State, `Country/Region` = Country_Region) %>%
+  pivot_longer(names_to = "date", cols = 5:(ncol(data_deceased_us) - 11)) %>%
+  group_by( `Country/Region`, date) %>%
+  dplyr::summarise("deceased" = sum(value, na.rm = T))%>%
+  dplyr::select(`Country/Region`, date, deceased)
+
+# combined us data
+data_us <- data_confirmed_us_long %>%
+  full_join(data_deceased_us_long) %>%
+  tibble::add_column(recovered = NA) %>%
+  dplyr::select(`Country/Region`, date, confirmed, recovered, deceased)
+
+data_world <- data_confirmed_long %>%
+  full_join(data_recovered_long) %>%
+  full_join(data_deceased_long) %>%
+  rbind(data_us) %>%
+  ungroup() %>%
+  mutate(date = as.Date(date, "%m/%d/%y")) %>%
+  arrange(date) %>%
+  group_by( `Country/Region`) %>%
+  tidyr::fill(confirmed, recovered, deceased) %>%
+  tidyr::replace_na(list(deceased = 0, confirmed = 0)) %>%
+  mutate(
+    recovered_est = lag(confirmed, 14, default = 0) - deceased,
+    recovered_est = ifelse(recovered_est > 0, recovered_est, 0),
+    recovered     = coalesce(recovered, recovered_est),
+    active        = confirmed - recovered - deceased
+  ) %>%
+  dplyr::select(-recovered_est) %>%ungroup()%>%
+  mutate(iso_code=countrycode(`Country/Region`, 'country.name', 'iso3c'))
+# save as RDS file
+saveRDS(data_world, "data_world.rds")
+
+
+
+# demogrphic data
+worldpopuage<-read.csv("C:/Users/USER/Desktop/R_data management/Final project/2020-06-22-Final project/world population by age both sex 2019.csv",
+                       header=T)
+
+# filter country and 2019 population, modify structure
+worldpopuage[ ,c(9:29)]<-as.numeric(unlist(worldpopuage[ ,c(9:29)]), digits=2)
+worldpopuage.country<-worldpopuage%>%
+  filter(Type=="Country/Area", Reference.date..as.of.1.July.==2015)%>%
+  mutate(age.group1=rowSums(.[ ,c(9,10)], na.rm=T),
+         age.group2=rowSums(.[ ,c(11,12)], na.rm=T),
+         age.group3=rowSums(.[ ,c(13,14)], na.rm=T),
+         age.group4=rowSums(.[ ,c(15,16)], na.rm=T),
+         age.group5=rowSums(.[ ,c(17,18)], na.rm=T),
+         age.group6=rowSums(.[ ,c(19,20)], na.rm=T),
+         age.group7=rowSums(.[ ,c(21,22)], na.rm=T),
+         age.group8=rowSums(.[ ,c(23,24)], na.rm=T),
+         age.group9=rowSums(.[ ,c(25,29)], na.rm=T))
+worldpopuage.country1<-worldpopuage.country[ ,-c(9:29)]
+worldpopuage.country2<-worldpopuage.country1%>%mutate(Total.pop=rowSums(.[,c(9,17)], na.rm=T ),
+                                                      f1=age.group1/Total.pop,
+                                                      f2=age.group2/Total.pop,
+                                                      f3=age.group3/Total.pop,
+                                                      f4=age.group4/Total.pop,
+                                                      f5=age.group5/Total.pop,
+                                                      f6=age.group6/Total.pop,
+                                                      f7=age.group7/Total.pop,
+                                                      f8=age.group8/Total.pop,
+                                                      f9=age.group9/Total.pop, 
+                                                      iso_code=countrycode(Country.code, 'un', 'iso3c' ))
+# to assign iso code for Taiwan                                                    
+worldpopuage.country2[93,28]<-"TWN"                                                    
+#save as RDS
+saveRDS(worldpopuage.country2, "worldpopuage.country2.rds")
+
+readRDS("worldpopuage.country2.rds")
+## combined
+world.count<-readRDS("data_world.rds")%>%dplyr::group_by(iso_code)%>%
+  dplyr::mutate(confirmed.d=ifelse(row_number() == 1,confirmed, lag(diff(confirmed, 1),1)),
+                recovered.d=ifelse(row_number() == 1,recovered, lag(diff(recovered, 1),1)),
+                deceased.d=ifelse(row_number() == 1,recovered, lag(diff(deceased, 1),1)),
+                death.rate=deceased/confirmed)%>%ungroup()
+
+## fraction of population in each country
+
+# world population data
+world.demo<-readRDS("worldpopuage.country2.rds")
+## CFR south Korea #fatality rate in South Korea 3/11/2020
+cfrsk<-c(0,0, 0, 0.0011, 0.0009, 0.0037, 0.0151, 0.0535, 0.1084)
+bench<-world.demo%>%filter(iso_code=="KOR")%>%
+  mutate(bvt=rowSums(.[ ,c(19:27)]*cfrsk))%>%dplyr::select(bvt)
+
+world.popage<-world.demo%>%
+  mutate(vt=rowSums(.[ ,c(19:27)]*cfrsk),
+         vtb=vt/bench$bvt)%>%dplyr::select(iso_code,vtb, Total.pop)
+
+# merge vtb information into world daily cases
+world.vtb<-merge(world.count,world.popage, by="iso_code")%>%arrange(iso_code,date)
+world.vtb$severe.c<-dplyr::case_when((world.vtb$confirmed<=1000)~"0-1",
+                                     (world.vtb$confirmed>1000 & world.vtb$confirmed<=5000) ~"1-5",
+                                     (world.vtb$confirmed>5000 & world.vtb$confirmed<=10000) ~"5-10",
+                                     (world.vtb$confirmed>10000 & world.vtb$confirmed<=50000) ~"10-50",
+                                     (world.vtb$confirmed>50000 & world.vtb$confirmed<=100000) ~"50-100",
+                                     (world.vtb$confirmed>100000 & world.vtb$confirmed<=500000) ~"100-500",
+                                     (world.vtb$confirmed>500000 & world.vtb$confirmed<=1000000) ~"500-1000",
+                                     (world.vtb$confirmed>1000000)  ~">1000")
+world.vtb$severe.d<-dplyr::case_when((world.vtb$deceased<=100)~"0-1",
+                                     (world.vtb$deceased>100 & world.vtb$deceased<=500) ~"1-5",
+                                     (world.vtb$deceased>500 & world.vtb$deceased<=1000) ~"5-10",
+                                     (world.vtb$deceased>1000 & world.vtb$deceased<=5000) ~"10-50",
+                                     (world.vtb$deceased>5000 & world.vtb$deceased<=10000) ~"50-100",
+                                     (world.vtb$deceased>10000 & world.vtb$deceased<=50000) ~"100-500",
+                                     (world.vtb$deceased>500000 ) ~">500")  
+
+saveRDS(world.vtb, "world.vtb.rds")
+```
+
+```{r out.height="100%", out.height="300%"}
+library(countrycode)
+world.vtb<-readRDS("world.vtb.rds")
+potential.case<-function(active_country, data=world.vtb){
+  world.vtb$active_country<-active_country
+  bench<-world.vtb%>%filter(iso_code=="KOR")
+  testttt<-world.vtb%>%dplyr::group_by(iso_code)%>%
+    dplyr:: mutate(scaling=death.rate/(vtb* sum(bench$death.rate) / length(bench$death.rate)),
+                   potential_cases=ifelse(is.na(confirmed.d*scaling), 0,confirmed.d*scaling))%>%
+    dplyr:: mutate(cumulative_potentialcase=cumsum(potential_cases))%>%ungroup()%>%
+    dplyr::filter(iso_code==active_country)%>%
+    reshape2::melt(id="date", measure.vars = c("active", "confirmed", "deceased", "recovered", "confirmed.d",
+                                               "recovered.d", "deceased.d", "death.rate", "cumulative_potentialcase"))%>%
+    dplyr::filter(variable%in%c("confirmed", "cumulative_potentialcase"))
+ 
+  g<-ggplot(data=testttt)+
+    geom_line(aes(x=date, y=value/100000, color=variable))+xlab("Time")+ylab("Cases, per hundred thousand")+
+    scale_color_manual(labels = c("Confirmed cases", "Potential cases"), values = c("blue", "red"))+
+    ggtitle(paste0('Potential cases of ', active_country))+theme_bw()+ theme(aspect.ratio=3/4)
+  print(g)
+  
+}
+
+```
+---
+## Reported cases correction 
+```{r ,out.height="100%", out.height="300%"}
+potential.case("GBR", "world.vtb")
+```
+---
+## Reported cases correction 
+```{r, out.height="100%", out.height="300%"}
+potential.case("USA", "world.vtb")
+```
+---
+## Reported cases correction 
+```{r ,fig.width=7, fig.high=5}
+potential.case("TWN","world.vtb")
+
+```
+---
+```{r eval=FALSE, include=FALSE}
+library(shiny)
+
+# Define UI for application that draws a histogram
+ui<-fluidPage(
+    
+    # Application title
+    titlePanel("COVID-19 Case Report Number Corrector"),
+    
+    # Sidebar with a slider input for number of bins
+    sidebarLayout(position = "left",
+    sidebarPanel(
+        selectInput("act_country", "Country", world.vtb$iso_code, "USA")
+        ),
+    
+    #Show a plot of the generated distribution
+    mainPanel(
+        fluidRow(column(8,
+                    plotOutput("actplot")), 
+                 
+        fluidRow(column(8,
+                 
+                 plotOutput("cumplot"))
+           
+    )
+    
+    ))))
+
+
+server<-function(input, output) {
+    
+    potential.case<-function(active_country, data=world.vtb){
+        world.vtb$active_country<-active_country
+        bench<-world.vtb%>%filter(iso_code=="KOR")
+        testttt<-world.vtb%>%dplyr::group_by(iso_code)%>%
+            dplyr:: mutate(scaling=death.rate/(vtb* sum(bench$death.rate) / length(bench$death.rate)),
+                           potential_cases=ifelse(is.na(confirmed.d*scaling), 0,confirmed.d*scaling))%>%
+            dplyr:: mutate(cumulative_potentialcase=cumsum(potential_cases))%>%ungroup()%>%
+            dplyr::filter(iso_code==active_country)%>%
+            reshape2::melt(id="date", measure.vars = c("active", "confirmed", "deceased", "recovered", "confirmed.d",
+                                                       "recovered.d", "deceased.d", "death.rate", "cumulative_potentialcase"))%>%
+            dplyr::filter(variable%in%c("confirmed", "cumulative_potentialcase"))
+        
+        g<-ggplot(data=testttt)+
+            geom_line(aes(x=date, y=value/100000, color=variable))+xlab("Time")+ylab("Cases, per hundred thousand")+
+            scale_color_manual(labels = c("Confirmed cases", "Potential cases"), values = c("blue", "red"))+
+            ggtitle(paste0('Potential cases of ', active_country))+theme_bw()+theme(aspect.ratio=3/4)
+        print(g)
+        
+    }
+    
+    output$actplot <- renderPlot({potential.case(input$act_country, data=world.vtb) })
+    
+    
+    cumulative.case<-function(active_country, data=world.vtb){
+        world.vtb$active_country<-active_country
+        testttt<-world.vtb%>%dplyr::group_by(iso_code)%>%
+            dplyr:: mutate(scaling=death.rate/(vtb* sum(bench$death.rate) / length(bench$death.rate)),
+                           potential_cases=ifelse(is.na(confirmed.d*scaling), 0,confirmed.d*scaling))%>%
+            dplyr:: mutate(cumulative_potentialcase=cumsum(potential_cases))%>%ungroup()%>%dplyr::filter(iso_code==active_country)%>%
+            reshape2::melt(id="date", measure.vars = c("active", "confirmed", "deceased", "recovered", "confirmed.d",
+                                                       "recovered.d", "deceased.d", "death.rate", "cumulative_potentialcase"))%>%
+            dplyr::filter(variable%in%c("confirmed", "recovered", "deceased" ))
+        
+        g1<-ggplot(data=testttt)+
+            geom_line(aes(x=date, y=value/100000, color=variable))+xlab("Time")+ylab("Cases, per hundred thousand")+
+            scale_color_manual(labels = c("Confirmed cases",  "Death","Recovered"), values = viridis(3))+
+            ggtitle(paste0('COVID-19 epidemic in ', active_country))+theme_bw()+theme(aspect.ratio=3/4)
+        print(g1)
+        
+    }
+    
+    output$cumplot <- renderPlot({cumulative.case(input$act_country, data=world.vtb) })
+   
+    
+    
+}
+shinyApp(ui, server)
+```
+
+---
+## Conclusion 
+-COVID-19 pandemic is still growing dramatically  
+-There might be more COVID-19 cases than reported  
+### Next step  
+-Try to build a mathematical model to project what will happen if world open border in different phase of pandemic (beyond class)  
+---
+class: inverse, center, middle
+class: inverse, center, middle
+# Thank you for listening
